@@ -186,7 +186,7 @@ namespace coderodde {
     {
         static SourceSelector<NodeType, FloatType> source_selector;
         
-        return *new SourceSelector<NodeType, FloatType>();
+        return source_selector;
     }
 }
 
