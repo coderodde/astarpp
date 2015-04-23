@@ -2,8 +2,10 @@
 #define	SHORTEST_PATH_H
 
 #include <queue>
+#include <string>
 #include <unordered_map>
 #include <unordered_set>
+#include <vector>
 
 /*******************************************************************************
 * This namespace holds a small, generic graph search framework.                *
@@ -290,12 +292,12 @@ namespace coderodde {
     * This function template implements the A* path search algorithm.          *
     ***************************************************************************/
     template<class NodeType, class WeightType = double>
-    std::vector<NodeType*>* astar(
-            NodeType* p_source,
-            NodeType* p_target,
-            coderodde::AbstractWeightFunction<NodeType, WeightType>& w,
-            coderodde::LayoutMap<NodeType, WeightType>& layout_map,
-            coderodde::AbstractMetric<WeightType>& metric)
+    std::vector<NodeType*>* 
+    astar(NodeType* p_source,
+          NodeType* p_target,
+          coderodde::AbstractWeightFunction<NodeType, WeightType>& w,
+          coderodde::LayoutMap<NodeType, WeightType>& layout_map,
+          coderodde::AbstractMetric<WeightType>& metric)
     {
         std::priority_queue<HeapNode<NodeType, WeightType>*,
                             std::vector<HeapNode<NodeType, WeightType>*>,
@@ -313,7 +315,6 @@ namespace coderodde {
         OPEN.push(new HeapNode<NodeType, WeightType>(p_source, WeightType(0)));
         p(p_source) = nullptr;
         d(p_source) = WeightType(0);
-
         
         while (!OPEN.empty())
         {
