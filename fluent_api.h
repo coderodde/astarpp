@@ -104,6 +104,11 @@ namespace coderodde {
             return coderodde::dijkstra(p_source, p_target, *p_wf);
         }
         
+        std::vector<NodeType*>* using_bidirectional_dijkstras_algorithm() 
+        {
+            return coderodde::bidirectional_dijkstra(p_source, p_target, *p_wf);
+        }
+        
         LayoutSelector<NodeType, FloatType>& using_astar() 
         {
             layout_selector.set_source(p_source);

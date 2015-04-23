@@ -17,13 +17,10 @@ namespace coderodde {
     ***************************************************************************/
     template<class NodeType>
     class AbstractGraphNode {
-
     protected:
-
+        
         using Set = std::unordered_set<NodeType*>;
-
-        std::string m_name;
-
+        
     public:
 
         /***********************************************************************
@@ -56,6 +53,36 @@ namespace coderodde {
         ***********************************************************************/
         virtual typename Set::iterator end() const = 0;
 
+        class ParentIterator {
+        public:
+            
+            ParentIterator() : mp_set{nullptr} {}
+            
+            typename Set::iterator begin() 
+            {
+                return mp_set->begin();
+            }
+            
+            typename Set::iterator end()  
+            {
+                return mp_set->end();
+            }
+            
+            void set_list(Set* p_list)
+            {
+                this->mp_set = p_list;
+            }
+            
+        private:
+            
+            std::unordered_set<NodeType*>* mp_set;
+        };
+        
+        /***********************************************************************
+        * Returns the iterator over this node's parent nodes.                  *
+        ***********************************************************************/
+        virtual ParentIterator* parents() = 0;
+        
         /***********************************************************************
         * Tests whether this node and 'other' have same identity.              *
         ***********************************************************************/
@@ -68,6 +95,10 @@ namespace coderodde {
         * Returns the name (identity) of this node.                            *
         ***********************************************************************/
         std::string& get_name() {return m_name;}
+        
+    protected:
+
+        std::string m_name;
     };
 
     /***************************************************************************
@@ -259,6 +290,32 @@ namespace coderodde {
         return p_path;
     }
 
+    template<class NodeType>
+    std::vector<NodeType*>* traceback_path(NodeType* p_touch,
+                                           ParentMap<NodeType>& parent_map1,
+                                           ParentMap<NodeType>& parent_map2)
+    {
+        std::vector<NodeType*>* p_path = new std::vector<NodeType*>();
+        NodeType* p_current = p_touch;
+        
+        while (p_current != nullptr)
+        {
+            p_path->push_back(p_current);
+            p_current = parent_map1(p_current);
+        }
+        
+        std::reverse(p_path->begin(), p_path->end());
+        p_current = parent_map2(p_touch);
+        
+        while (p_current != nullptr)
+        {
+            p_path->push_back(p_current);
+            p_current = parent_map2(p_current);
+        }
+        
+        return p_path;
+    }
+    
     /***************************************************************************
     * This class implements a heuristic function.                              *
     ***************************************************************************/
@@ -318,8 +375,10 @@ namespace coderodde {
         
         while (!OPEN.empty())
         {
-            NodeType* p_current = OPEN.top()->get_node();
+            HeapNode<NodeType, WeightType>* p_heap_node = OPEN.top();
+            NodeType* p_current = p_heap_node->get_node();
             OPEN.pop();
+            delete p_heap_node;
 
             if (*p_current == *p_target)
             {
@@ -395,6 +454,135 @@ namespace coderodde {
                      metric);
     }
 
+    template<class NodeType, class WeightType = double>
+    std::vector<NodeType*>*
+    bidirectional_dijkstra(
+        NodeType* p_source,
+        NodeType* p_target,
+        coderodde::AbstractWeightFunction<NodeType, WeightType>& w) 
+    {
+        std::priority_queue<HeapNode<NodeType, WeightType>*,
+                            std::vector<HeapNode<NodeType, WeightType>*>,
+                            HeapNodeComparison<NodeType, WeightType>> OPENA;
+        
+        std::priority_queue<HeapNode<NodeType, WeightType>*,
+                            std::vector<HeapNode<NodeType, WeightType>*>,
+                            HeapNodeComparison<NodeType, WeightType>> OPENB;
+        
+        std::unordered_set<NodeType*> CLOSEDA;
+        std::unordered_set<NodeType*> CLOSEDB;
+        
+        DistanceMap<NodeType, WeightType> DISTANCEA;
+        DistanceMap<NodeType, WeightType> DISTANCEB;
+        
+        ParentMap<NodeType> PARENTA;
+        ParentMap<NodeType> PARENTB;
+        
+        OPENA.push(new HeapNode<NodeType, WeightType>(p_source, 0.0));
+        OPENB.push(new HeapNode<NodeType, WeightType>(p_target, 0.0));
+        
+        DISTANCEA(p_source) = WeightType(0);
+        DISTANCEB(p_target) = WeightType(0);
+        
+        PARENTA(p_source) = nullptr;
+        PARENTB(p_target) = nullptr;
+        
+        NodeType* p_touch = nullptr;
+        WeightType best_cost = std::numeric_limits<WeightType>::max();
+        
+        while (!OPENA.empty() && !OPENB.empty())
+        {
+            if (OPENA.top()->get_distance() + 
+                OPENB.top()->get_distance() >= best_cost)
+            {
+                return traceback_path(p_touch, PARENTA, PARENTB);
+            }
+            
+            if (OPENA.top()->get_distance() < OPENB.top()->get_distance())
+            {
+                HeapNode<NodeType, WeightType>* p_heap_node = OPENA.top();
+                NodeType* p_current = p_heap_node->get_node();
+                OPENA.pop();
+                delete p_heap_node;
+                
+                CLOSEDA.insert(p_current);
+                
+                for (NodeType* p_child : *p_current)
+                {
+                    if (CLOSEDA.find(p_child) != CLOSEDA.end()) 
+                    {
+                        continue;
+                    }
+                    
+                    WeightType g = DISTANCEA(p_current) + w(p_current, p_child);
+                    
+                    if (!PARENTA.has(p_child) || g < DISTANCEA(p_current))
+                    {
+                        OPENA.push(new HeapNode<NodeType, 
+                                                WeightType>(p_child, g));
+                        DISTANCEA(p_child) = g;
+                        PARENTA(p_child) = p_current;
+                        
+                        if (CLOSEDB.find(p_child) != CLOSEDB.end())
+                        {
+                            WeightType path_len = g + DISTANCEB(p_child);
+                            
+                            if (best_cost > path_len)
+                            {
+                                best_cost = path_len;
+                                p_touch = p_child;
+                            }
+                        }
+                    }
+                }
+            } 
+            else
+            {
+                HeapNode<NodeType, WeightType>* p_heap_node = OPENB.top();
+                NodeType* p_current = p_heap_node->get_node();
+                OPENB.pop();
+                delete p_heap_node;
+                
+                CLOSEDB.insert(p_current);
+                
+                typename coderodde::AbstractGraphNode<NodeType>::ParentIterator*
+                        p_iterator = p_current->parents();
+                
+                for (NodeType* p_parent : *p_iterator)
+                {
+                    if (CLOSEDB.find(p_parent) != CLOSEDB.end()) 
+                    {
+                        continue;
+                    }
+                    
+                    WeightType g = DISTANCEB(p_current) + 
+                                   w(p_parent, p_current);
+                    
+                    if (!PARENTB.has(p_parent) || g < DISTANCEB(p_parent))
+                    {
+                        OPENB.push(new HeapNode<NodeType, 
+                                                WeightType>(p_parent, g));
+                        DISTANCEB(p_parent) = g;
+                        PARENTB(p_parent) = p_current;
+                        
+                        if (CLOSEDA.find(p_parent) != CLOSEDA.end())
+                        {
+                            WeightType path_len = g + DISTANCEA(p_parent);
+                            
+                            if (best_cost > path_len)
+                            {
+                                best_cost = path_len;
+                                p_touch = p_parent;
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        
+        return nullptr;
+    }
+    
     /***************************************************************************
     * This class implements a directed graph node.                             *
     ***************************************************************************/
@@ -402,7 +590,7 @@ namespace coderodde {
     public:
 
         DirectedGraphNode(std::string name) :
-        coderodde::AbstractGraphNode<DirectedGraphNode>(name)
+                coderodde::AbstractGraphNode<DirectedGraphNode>(name)
         {
             this->m_name = name;
         }
@@ -422,6 +610,12 @@ namespace coderodde {
         {
             m_out.erase(p_other);
             p_other->m_in.erase(this);
+        }
+        
+        ParentIterator* parents() 
+        {
+            m_iterator.set_list(&m_in);
+            return &m_iterator;
         }
 
         typename Set::iterator begin() const
@@ -443,6 +637,7 @@ namespace coderodde {
     private:
         Set m_in;
         Set m_out;
+        ParentIterator m_iterator;
     };
 
     /***************************************************************************

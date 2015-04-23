@@ -254,6 +254,34 @@ int main(int argc, const char * argv[]) {
     cout << "Is valid path: " << is_valid_path(p_path1) << endl;
     cout << "Cost: " << compute_path_length(p_path2, get<1>(graph_data)) << endl;
 
+    cout << endl;
+    cout << "Bidirectional Dijkstra path:" << endl;
+
+    ta = get_milliseconds();
+
+    vector<DirectedGraphNode*>* p_path3 = 
+            find_shortest_path<DirectedGraphNode, double>()
+                              .from(p_source)
+                              .to(p_target)
+                              .with_weight_function(get<1>(graph_data))
+                              .using_bidirectional_dijkstras_algorithm();
+    tb = get_milliseconds();
+
+    if (!p_path3)
+    {
+        cout << "No path for bidirectional Dijkstra's algorithm!" << endl;
+        return 0;
+    }
+
+    for (DirectedGraphNode* p_node : *p_path2)
+    {
+        cout << *p_node << endl;
+    }
+
+    cout << "Time elapsed: " << tb - ta << " ms." << endl;
+    cout << "Is valid path: " << is_valid_path(p_path1) << endl;
+    cout << "Cost: " << compute_path_length(p_path2, get<1>(graph_data)) << endl;
+
     vector<coderodde::DirectedGraphNode*>* p_vec = get<0>(graph_data);
 
     while (!p_vec->empty())
