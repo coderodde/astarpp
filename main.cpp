@@ -231,11 +231,12 @@ int main(int argc, const char * argv[]) {
 
     ta = get_milliseconds();
 
-    vector<DirectedGraphNode*>* p_path2 = find_shortest_path<DirectedGraphNode, double>()
-                                            .from(p_source)
-                                            .to(p_target)
-                                            .with_weight_function(get<1>(graph_data))
-                                            .using_dijkstras_algorithm();
+    vector<DirectedGraphNode*>* p_path2 = 
+            find_shortest_path<DirectedGraphNode, double>()
+                              .from(p_source)
+                              .to(p_target)
+                              .with_weight_function(get<1>(graph_data))
+                              .using_dijkstras_algorithm();
     tb = get_milliseconds();
 
     if (!p_path2)

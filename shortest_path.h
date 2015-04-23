@@ -137,7 +137,7 @@ namespace coderodde {
     class LayoutMap {
     public:
 
-        coderodde::Point3D<FloatType>*& operator()(T* key)
+        virtual coderodde::Point3D<FloatType>*& operator()(T* key)
         {
             return m_map[key];
         }
@@ -307,7 +307,6 @@ namespace coderodde {
                                      WeightType> h(p_target,
                                                    layout_map,
                                                    metric);
-
         DistanceMap<NodeType, WeightType> d;
         ParentMap<NodeType> p;
 
@@ -315,6 +314,7 @@ namespace coderodde {
         p(p_source) = nullptr;
         d(p_source) = WeightType(0);
 
+        
         while (!OPEN.empty())
         {
             NodeType* p_current = OPEN.top()->get_node();
@@ -331,6 +331,7 @@ namespace coderodde {
             // For each child of 'p_current' do...
             for (NodeType* p_child : *p_current)
             {
+                
                 if (CLOSED.find(p_child) != CLOSED.end())
                 {
                     // The optimal distance from source to p_child is known.
@@ -353,6 +354,27 @@ namespace coderodde {
         return nullptr;
     }
 
+    template<class T, class FloatType>
+    class ConstantLayoutMap : public coderodde::LayoutMap<T, FloatType> {
+    public:
+        
+        ConstantLayoutMap() : mp_point{new Point3D<FloatType>()} {}
+        
+        ~ConstantLayoutMap() 
+        {
+            delete mp_point;
+        }
+        
+        Point3D<FloatType>*& operator()(T* key)
+        {
+            return mp_point;
+        }
+            
+    private:
+        
+        Point3D<FloatType>* mp_point;
+    };
+    
     /***************************************************************************
     * This function template implements Dijkstra's shortest path algorithm.    *
     ***************************************************************************/
@@ -362,56 +384,14 @@ namespace coderodde {
              NodeType* p_target,
              coderodde::AbstractWeightFunction<NodeType, WeightType>& w)
     {
-
-        std::priority_queue<HeapNode<NodeType, WeightType>*,
-                            std::vector<HeapNode<NodeType, WeightType>*>,
-                            HeapNodeComparison<NodeType, WeightType>> OPEN;
-
-
-        std::unordered_set<NodeType*> CLOSED;
-
-        DistanceMap<NodeType, WeightType> d;
-        ParentMap<NodeType> p;
-
-        OPEN.push(new HeapNode<NodeType, WeightType>(p_source, WeightType(0)));
-        p(p_source) = nullptr;
-        d(p_source) = WeightType(0);
-
-        while (!OPEN.empty())
-        {
-            NodeType* p_current = OPEN.top()->get_node();
-            OPEN.pop();
-
-            if (*p_current == *p_target)
-            {
-                // Found the path.
-                return traceback_path(p_target, &p);
-            }
-
-            CLOSED.insert(p_current);
-
-            // For each child of 'p_current' do...
-            for (NodeType* p_child : *p_current)
-            {
-                if (CLOSED.find(p_child) != CLOSED.end())
-                {
-                    // The optimal distance from source to p_child is known.
-                    continue;
-                }
-
-                WeightType cost = d(p_current) + w(p_current, p_child);
-
-                if (!p.has(p_child) || cost < d(p_child))
-                {
-                    OPEN.push(new HeapNode<NodeType, WeightType>(p_child, cost));
-                    d(p_child) = cost;
-                    p(p_child) = p_current;
-                }
-            }
-        }
-
-        // p_target not reachable from p_source.
-        return nullptr;
+        ConstantLayoutMap<NodeType, WeightType> layout;
+        EuclideanMetric<WeightType> metric;
+        
+        return astar(p_source,
+                     p_target,
+                     w,
+                     layout,
+                     metric);
     }
 
     /***************************************************************************
