@@ -166,15 +166,15 @@ int main(int argc, const char * argv[]) {
     random_device rd;
     mt19937 random_gen(rd());
 
-    cout << "Building graph..." << endl;
+    cout << "Building a graph..." << endl;
 
     tuple<vector<DirectedGraphNode*>*,
           DirectedGraphWeightFunction*,
           LayoutMap<DirectedGraphNode, double>*> graph_data =
-    create_random_graph(20000,
+    create_random_graph(50000,
                         1000.0,
                         700.0,
-                        0.001f,
+                        0.0001f,
                         1.2f,
                         random_gen);
 
@@ -251,7 +251,7 @@ int main(int argc, const char * argv[]) {
     }
 
     cout << "Time elapsed: " << tb - ta << " ms." << endl;
-    cout << "Is valid path: " << is_valid_path(p_path1) << endl;
+    cout << "Is valid path: " << is_valid_path(p_path2) << endl;
     cout << "Cost: " << compute_path_length(p_path2, get<1>(graph_data)) << endl;
 
     cout << endl;
@@ -273,14 +273,14 @@ int main(int argc, const char * argv[]) {
         return 0;
     }
 
-    for (DirectedGraphNode* p_node : *p_path2)
+    for (DirectedGraphNode* p_node : *p_path3)
     {
         cout << *p_node << endl;
     }
 
     cout << "Time elapsed: " << tb - ta << " ms." << endl;
-    cout << "Is valid path: " << is_valid_path(p_path1) << endl;
-    cout << "Cost: " << compute_path_length(p_path2, get<1>(graph_data)) << endl;
+    cout << "Is valid path: " << is_valid_path(p_path3) << endl;
+    cout << "Cost: " << compute_path_length(p_path3, get<1>(graph_data)) << endl;
 
     vector<coderodde::DirectedGraphNode*>* p_vec = get<0>(graph_data);
 
