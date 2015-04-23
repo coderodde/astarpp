@@ -7,14 +7,8 @@
 #include <unordered_set>
 #include <vector>
 
-/*******************************************************************************
-* This namespace holds a small, generic graph search framework.                *
-*******************************************************************************/
 namespace coderodde {
 
-    /***************************************************************************
-    * This abstract type defines the API for graph nodes.                      *
-    ***************************************************************************/
     template<class NodeType>
     class AbstractGraphNode {
     protected:
@@ -23,34 +17,11 @@ namespace coderodde {
         
     public:
 
-        /***********************************************************************
-        * Assigns a name to the node. The name is treated as the node ID.      *
-        ***********************************************************************/
         AbstractGraphNode(std::string name) : m_name{name} {}
-
-        /***********************************************************************
-        * Connects this node to 'other'.                                       *
-        ***********************************************************************/
         virtual void connect_to(NodeType* other) = 0;
-
-        /***********************************************************************
-        * Tests whether this node is connected to 'other'.                     * 
-        ***********************************************************************/
         virtual bool is_connected_to(NodeType* other) const = 0;
-
-        /***********************************************************************
-        * Disconnects this node from 'other'.                                  * 
-        ***********************************************************************/
         virtual void disconnect_from(NodeType* other) = 0;
-
-        /***********************************************************************
-        * Returns the beginning iterator over this node's child nodes.         *
-        ***********************************************************************/
         virtual typename Set::iterator begin() const = 0;
-
-        /***********************************************************************
-        * Returns the ending iterator over this node's child nodes.            *
-        ***********************************************************************/
         virtual typename Set::iterator end() const = 0;
 
         class ParentIterator {
@@ -77,23 +48,14 @@ namespace coderodde {
             
             std::unordered_set<NodeType*>* mp_set;
         };
-        
-        /***********************************************************************
-        * Returns the iterator over this node's parent nodes.                  *
-        ***********************************************************************/
+
         virtual ParentIterator* parents() = 0;
-        
-        /***********************************************************************
-        * Tests whether this node and 'other' have same identity.              *
-        ***********************************************************************/
+
         bool operator==(const NodeType& other) const
         {
             return m_name == other.m_name;
         }
 
-        /***********************************************************************
-        * Returns the name (identity) of this node.                            *
-        ***********************************************************************/
         std::string& get_name() {return m_name;}
         
     protected:
@@ -101,9 +63,6 @@ namespace coderodde {
         std::string m_name;
     };
 
-    /***************************************************************************
-    * This abstract type defines the API for an edge weight function.          *
-    ***************************************************************************/
     template<class T, class FloatType = double>
     class AbstractWeightFunction {
     public:
@@ -111,9 +70,6 @@ namespace coderodde {
         virtual FloatType& operator()(T* p_node1, T* p_node2) = 0;
     };
 
-    /***************************************************************************
-    * This class defines a point in 3D-space for node locations.               *
-    ***************************************************************************/
     template<class FloatType>
     class Point3D {
     private:
@@ -135,9 +91,6 @@ namespace coderodde {
         FloatType z() const {return m_z;}
     };
 
-    /***************************************************************************
-    * This class defines the API for a metric.                                 * 
-    ***************************************************************************/
     template<class FloatType>
     class AbstractMetric {
     public:
@@ -146,9 +99,6 @@ namespace coderodde {
                                      coderodde::Point3D<FloatType>& p2) = 0;
     };
 
-    /***************************************************************************
-    * This class implements an Euclidean metric.                               *
-    ***************************************************************************/
     template<class FloatType>
     class EuclideanMetric : public coderodde::AbstractMetric<FloatType> {
     public:
@@ -163,9 +113,6 @@ namespace coderodde {
         }
     };
 
-    /***************************************************************************
-    * This class implements a map from a node to its locations.                *
-    ***************************************************************************/
     template<class T, class FloatType = double>
     class LayoutMap {
     public:
@@ -191,9 +138,6 @@ namespace coderodde {
         std::unordered_map<T*, coderodde::Point3D<FloatType>*> m_map;
     };
 
-    /***************************************************************************
-    * This class holds a node and its priority. Used in the heap.              *
-    ***************************************************************************/
     template<class NodeType, class DistanceType = double>
     class HeapNode {
     public:
@@ -216,9 +160,6 @@ namespace coderodde {
         DistanceType m_distance;
     };
 
-    /***************************************************************************
-    * This function object compares two heap nodes.                            *
-    ***************************************************************************/
     template<class NodeType, class DistanceType = double>
     class HeapNodeComparison {
     public:
@@ -230,10 +171,6 @@ namespace coderodde {
         }
     };
 
-    /***************************************************************************
-    * This class implements a map from nodes to its best known distance from   *
-    * source.                                                                  *
-    ***************************************************************************/
     template<class NodeType, class FloatType = double>
     class DistanceMap {
     public:
@@ -248,9 +185,6 @@ namespace coderodde {
         std::unordered_map<const NodeType*, FloatType> m_map;
     };
 
-    /***************************************************************************
-    * This class maps a graph node to its parent node on a shortest path.      *
-    ***************************************************************************/
     template<class NodeType>
     class ParentMap {
     public:
@@ -270,55 +204,36 @@ namespace coderodde {
         std::unordered_map<const NodeType*, NodeType*> m_map;
     };
 
-    /***************************************************************************
-    * Constructs a shortest path from the target node and parent map.          *
-    ***************************************************************************/
-    template<class NodeType>
-    std::vector<NodeType*>* traceback_path(NodeType* p_target,
-                                           ParentMap<NodeType>* parent_map)
-    {
-        std::vector<NodeType*>* p_path = new std::vector<NodeType*>();
-        NodeType* p_current = p_target;
-
-        while (p_current != nullptr)
-        {
-            p_path->push_back(p_current);
-            p_current = (*parent_map)(p_current);
-        }
-
-        std::reverse(p_path->begin(), p_path->end());
-        return p_path;
-    }
-
     template<class NodeType>
     std::vector<NodeType*>* traceback_path(NodeType* p_touch,
-                                           ParentMap<NodeType>& parent_map1,
-                                           ParentMap<NodeType>& parent_map2)
+                                           ParentMap<NodeType>* parent_map1,
+                                           ParentMap<NodeType>* parent_map2 = nullptr)
     {
         std::vector<NodeType*>* p_path = new std::vector<NodeType*>();
         NodeType* p_current = p_touch;
-        
+
         while (p_current != nullptr)
         {
             p_path->push_back(p_current);
-            p_current = parent_map1(p_current);
+            p_current = (*parent_map1)(p_current);
         }
-        
+
         std::reverse(p_path->begin(), p_path->end());
-        p_current = parent_map2(p_touch);
         
-        while (p_current != nullptr)
+        if (parent_map2 != nullptr)
         {
-            p_path->push_back(p_current);
-            p_current = parent_map2(p_current);
+            p_current = (*parent_map2)(p_touch);
+            
+            while (p_current != nullptr)
+            {
+                p_path->push_back(p_current);
+                p_current = (*parent_map2)(p_current);
+            }
         }
         
         return p_path;
     }
     
-    /***************************************************************************
-    * This class implements a heuristic function.                              *
-    ***************************************************************************/
     template<class T, class FloatType = double>
     class HeuristicFunction {
 
@@ -345,9 +260,6 @@ namespace coderodde {
         coderodde::Point3D<FloatType>*        mp_target_point;
     };
 
-    /***************************************************************************
-    * This function template implements the A* path search algorithm.          *
-    ***************************************************************************/
     template<class NodeType, class WeightType = double>
     std::vector<NodeType*>* 
     astar(NodeType* p_source,
@@ -495,7 +407,7 @@ namespace coderodde {
             if (OPENA.top()->get_distance() + 
                 OPENB.top()->get_distance() >= best_cost)
             {
-                return traceback_path(p_touch, PARENTA, PARENTB);
+                return traceback_path(p_touch, &PARENTA, &PARENTB);
             }
             
             if (OPENA.top()->get_distance() < OPENB.top()->get_distance())
@@ -583,9 +495,6 @@ namespace coderodde {
         return nullptr;
     }
     
-    /***************************************************************************
-    * This class implements a directed graph node.                             *
-    ***************************************************************************/
     class DirectedGraphNode : public coderodde::AbstractGraphNode<DirectedGraphNode> {
     public:
 
@@ -640,9 +549,6 @@ namespace coderodde {
         ParentIterator m_iterator;
     };
 
-    /***************************************************************************
-    * This class implements an (asymmetric) directed graph weight function.    * 
-    ***************************************************************************/
     class DirectedGraphWeightFunction :
     public AbstractWeightFunction<coderodde::DirectedGraphNode, double> {
 
